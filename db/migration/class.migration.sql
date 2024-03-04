@@ -1,0 +1,24 @@
+CREATE TABLE classes (
+	id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+	lecturerId BIGINT NOT NULL,
+	subjectId BIGINT NOT NULL,
+	reviewId BIGINT NOT NULL,
+	year INT,
+	semester VARCHAR(2) NOT NULL,
+	start_time TIME,
+	end_time TIME,
+	CONSTRAINT fk_lecturer FOREIGN KEY (lecturerId)
+											REFERENCES lecturers(id)
+											ON UPDATE CASCADE
+											ON DELETE CASCADE,
+	CONSTRAINT fk_subject FOREIGN KEY (subjectId)
+											REFERENCES subjects(id)
+											ON UPDATE CASCADE
+											ON DELETE CASCADE,
+	CONSTRAINT fk_review FOREIGN KEY (reviewId)
+											REFERENCES reviews(id)
+											ON UPDATE CASCADE
+											ON DELETE CASCADE,
+	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL
+);
