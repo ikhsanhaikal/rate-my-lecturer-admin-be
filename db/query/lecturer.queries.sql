@@ -9,4 +9,8 @@ WHERE id = ?;
 -- name: ListLecturers :many
 SELECT * FROM lecturers;
 
+-- name: GetLecturerById :one
+SELECT * FROM lecturers 
+WHERE lecturers.id = ?;
+
 

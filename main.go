@@ -25,23 +25,38 @@ func main() {
 		os.Exit(1)
 	}
 
-	repository := gql.Repository{
-		Db: conn,
+	builder := gql.TypeBuilder{
+		DB: conn,
 	}
+
+	resolver := gql.Resolver{
+		DB: conn,
+	}
+
+	labType := builder.LabType()
+	lecturerType := builder.LecturerType(labType)
 
 	rootQuery := graphql.NewObject(graphql.ObjectConfig{
 		Name: "RootQuery",
 		Fields: graphql.Fields{
-			"Lecturers": &graphql.Field{
-				Type:    graphql.NewList(repository.LecturerType()),
-				Resolve: repository.ListLecturersResolver,
+			"lecturers": &graphql.Field{
+				Type:    graphql.NewList(lecturerType),
+				Resolve: resolver.ListLecturers,
+			},
+			"lecturer": &graphql.Field{
+				Type: lecturerType,
+				Args: graphql.FieldConfigArgument{
+					"id": &graphql.ArgumentConfig{
+						Type: graphql.NewNonNull(graphql.Int),
+					},
+				},
+				Resolve: resolver.GetLecturerById,
 			},
 		},
 	})
 
 	var AppSchema, _ = graphql.NewSchema(graphql.SchemaConfig{
-		Query:    rootQuery,
-		Mutation: nil,
+		Query: rootQuery,
 	})
 
 	if err := godotenv.Load(); err != nil {
@@ -54,6 +69,12 @@ func main() {
 		Schema:   &AppSchema,
 		Pretty:   true,
 		GraphiQL: true,
+		// RootObjectFn: func(ctx context.Context, r *http.Request) map[string]interface{} {
+		// 	rootObject := map[string]interface{}{
+		// 		"data-test": "ok",
+		// 	}
+		// 	return rootObject
+		// },
 	})
 
 	app.Use("/graphql", adaptor.HTTPHandler(h))
