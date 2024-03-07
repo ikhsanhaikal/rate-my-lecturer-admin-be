@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 
@@ -11,6 +12,8 @@ import (
 	"github.com/graphql-go/graphql"
 	"github.com/graphql-go/handler"
 	"github.com/ikhsanhaikal/rate-my-lecturer-graphql-admin/be-app/gql"
+	"github.com/ikhsanhaikal/rate-my-lecturer-graphql-admin/be-app/middleware"
+	db "github.com/ikhsanhaikal/rate-my-lecturer-graphql-admin/be-app/mysql"
 	"github.com/joho/godotenv"
 )
 
@@ -51,6 +54,29 @@ func main() {
 					},
 				},
 				Resolve: resolver.GetLecturerById,
+			},
+			"me": &graphql.Field{
+				Type: userType,
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					var queries = db.New(conn)
+
+					fmt.Printf("ME QUERY CALLED\n")
+
+					var userEmail, ok = p.Context.Value("user").(string)
+					if !ok {
+						fmt.Printf("err on cast userInfo\n")
+						return nil, errors.New("server failed :)")
+					}
+
+					var user, err = queries.GetUserByEmail(p.Context, userEmail)
+
+					if err != nil {
+						return nil, err
+					}
+
+					fmt.Printf("user: %+v\n", user)
+					return user, nil
+				},
 			},
 		},
 	})
@@ -95,9 +121,18 @@ func main() {
 		Pretty:     true,
 		GraphiQL:   false,
 		Playground: true,
+		// RootObjectFn: func(ctx context.Context, r *http.Request) map[string]interface{} {
+		// 	fmt.Printf("graphql: %+v\n", ctx.Value("user"))
+		// 	fmt.Printf("graphql: %+v\n", r.Context().Value("user"))
+		// 	return map[string]interface{}{
+		// 		"apple": "nil",
+		// 	}
+		// },
 	})
 
-	app.Use("/graphql", adaptor.HTTPHandler(h))
+	app.Use(middleware.AuthMiddleware(conn))
+
+	app.All("/graphql", adaptor.HTTPHandler(h))
 
 	app.Listen("127.0.0.1:8080")
 }

@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -21,7 +20,7 @@ func AuthMiddleware(conn *sql.DB) fiber.Handler {
 	return jwtware.New(jwtware.Config{
 		JWKSetURLs: []string{os.Getenv("AUTH0_JWKS")},
 		SuccessHandler: func(c *fiber.Ctx) error {
-			user := c.Locals("user").(*jwt.Token)
+			user := c.Locals("token").(*jwt.Token)
 
 			aud, err := user.Claims.GetAudience()
 
@@ -46,12 +45,6 @@ func AuthMiddleware(conn *sql.DB) fiber.Handler {
 				},
 			}
 
-			type UserInfo struct {
-				Name    string `json:"name"`
-				Picture string `json:"picture"`
-				Email   string `json:"email"`
-			}
-
 			request.URL = url
 			client := http.Client{}
 
@@ -62,7 +55,7 @@ func AuthMiddleware(conn *sql.DB) fiber.Handler {
 			}
 
 			userInfo := &UserInfo{}
-			body, err := ioutil.ReadAll(resp.Body)
+			body, _ := ioutil.ReadAll(resp.Body)
 
 			if err := json.Unmarshal(body, userInfo); err != nil {
 				return c.JSON(fiber.Map{
@@ -72,7 +65,7 @@ func AuthMiddleware(conn *sql.DB) fiber.Handler {
 
 			queries := db.New(conn)
 
-			usrRecord, err := queries.GetUserByEmail(context.Background(), userInfo.Email)
+			// usrRecord, err := queries.GetUserByEmail(context.Background(), userInfo.Email)
 
 			if err != nil {
 				if errors.Is(err, sql.ErrNoRows) {
@@ -89,10 +82,13 @@ func AuthMiddleware(conn *sql.DB) fiber.Handler {
 				}
 			}
 
-			fmt.Printf("usrRecord: %+v\n", usrRecord)
+			c.Locals("user", userInfo.Email)
+
+			// fmt.Printf("usrRecord: %+v\n", usrRecord)
 			fmt.Printf("body %+v\n", userInfo)
 
 			return c.Next()
 		},
+		ContextKey: "token",
 	})
 }

@@ -35,6 +35,8 @@ func (r *Resolver) GetLecturerById(p graphql.ResolveParams) (interface{}, error)
 
 	id := p.Args["id"].(int)
 
+	fmt.Printf("resolver user %+v\n", p.Context.Value("user"))
+
 	lecturer, err := queries.GetLecturerById(p.Context, int32(id))
 
 	fmt.Printf("lecturer: %+v\n", lecturer)
