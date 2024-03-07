@@ -11,7 +11,6 @@ import (
 	"github.com/graphql-go/graphql"
 	"github.com/graphql-go/handler"
 	"github.com/ikhsanhaikal/rate-my-lecturer-graphql-admin/be-app/gql"
-	"github.com/ikhsanhaikal/rate-my-lecturer-graphql-admin/be-app/middleware"
 	"github.com/joho/godotenv"
 )
 
@@ -35,6 +34,7 @@ func main() {
 
 	labType := builder.LabType()
 	lecturerType := builder.LecturerType(labType)
+	userType := builder.UserType()
 
 	rootQuery := graphql.NewObject(graphql.ObjectConfig{
 		Name: "RootQuery",
@@ -55,26 +55,46 @@ func main() {
 		},
 	})
 
+	rootMutation := graphql.NewObject(graphql.ObjectConfig{
+		Name: "RootMutation",
+		Fields: graphql.Fields{
+			"lecturer": &graphql.Field{
+				Type:        lecturerType,
+				Description: "create a lecturer",
+				Args: graphql.FieldConfigArgument{
+					"input": &graphql.ArgumentConfig{
+						Type: graphql.NewNonNull(gql.CreateLecturerInput),
+					},
+				},
+				Resolve: resolver.CreateLecturer,
+			},
+			"users": &graphql.Field{
+				Type:        userType,
+				Description: "create a user",
+				Args: graphql.FieldConfigArgument{
+					"input": &graphql.ArgumentConfig{
+						Type: graphql.NewNonNull(gql.CreateUserInput),
+					},
+				},
+				Resolve: resolver.CreateUser,
+			},
+		},
+	})
+
 	var AppSchema, _ = graphql.NewSchema(graphql.SchemaConfig{
-		Query: rootQuery,
+		Query:    rootQuery,
+		Mutation: rootMutation,
 	})
 
 	if err := godotenv.Load(); err != nil {
 		os.Exit(1)
 	}
 
-	app.Use("/api", middleware.AuthMiddleware(conn))
-
 	h := handler.New(&handler.Config{
-		Schema:   &AppSchema,
-		Pretty:   true,
-		GraphiQL: true,
-		// RootObjectFn: func(ctx context.Context, r *http.Request) map[string]interface{} {
-		// 	rootObject := map[string]interface{}{
-		// 		"data-test": "ok",
-		// 	}
-		// 	return rootObject
-		// },
+		Schema:     &AppSchema,
+		Pretty:     true,
+		GraphiQL:   false,
+		Playground: true,
 	})
 
 	app.Use("/graphql", adaptor.HTTPHandler(h))
