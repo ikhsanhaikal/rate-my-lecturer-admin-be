@@ -5,5 +5,5 @@ sql:
     schema: "./db/migration/*.sql"
     gen:
       go:
-        package: "db"
-        out: "mysql"
+        package: "sqlcdb"
+        out: "sqlcdb"

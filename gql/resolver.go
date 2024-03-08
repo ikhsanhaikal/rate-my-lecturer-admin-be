@@ -7,7 +7,7 @@ import (
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/graphql-go/graphql"
-	db "github.com/ikhsanhaikal/rate-my-lecturer-graphql-admin/be-app/mysql"
+	"github.com/ikhsanhaikal/rate-my-lecturer-graphql-admin/be-app/sqlcdb"
 )
 
 type Resolver struct {
@@ -19,7 +19,7 @@ type TypeBuilder struct {
 }
 
 func (r *Resolver) ListLecturers(p graphql.ResolveParams) (interface{}, error) {
-	queries := db.New(r.DB)
+	queries := sqlcdb.New(r.DB)
 
 	lecturers, err := queries.ListLecturers(p.Context)
 
@@ -31,7 +31,7 @@ func (r *Resolver) ListLecturers(p graphql.ResolveParams) (interface{}, error) {
 }
 
 func (r *Resolver) GetLecturerById(p graphql.ResolveParams) (interface{}, error) {
-	queries := db.New(r.DB)
+	queries := sqlcdb.New(r.DB)
 
 	id := p.Args["id"].(int)
 
@@ -49,7 +49,7 @@ func (r *Resolver) GetLecturerById(p graphql.ResolveParams) (interface{}, error)
 }
 
 func (r *Resolver) CreateLecturer(p graphql.ResolveParams) (interface{}, error) {
-	var queries = db.New(r.DB)
+	var queries = sqlcdb.New(r.DB)
 
 	input, ok := p.Args["input"].(map[string]interface{})
 
@@ -60,12 +60,12 @@ func (r *Resolver) CreateLecturer(p graphql.ResolveParams) (interface{}, error) 
 
 	fmt.Printf("input: %+v\n", input)
 
-	result, err := queries.CreateLecturer(p.Context, db.CreateLecturerParams{
+	result, err := queries.CreateLecturer(p.Context, sqlcdb.CreateLecturerParams{
 		Name:        input["name"].(string),
 		Email:       input["email"].(string),
 		Description: input["description"].(string),
 		Labid:       int32(input["labId"].(int)),
-		Gender:      db.LecturersGenderMale,
+		Gender:      sqlcdb.LecturersGenderMale,
 	})
 
 	if err != nil {
@@ -85,7 +85,7 @@ func (r *Resolver) CreateLecturer(p graphql.ResolveParams) (interface{}, error) 
 }
 
 func (r *Resolver) CreateUser(p graphql.ResolveParams) (interface{}, error) {
-	var queries = db.New(r.DB)
+	var queries = sqlcdb.New(r.DB)
 
 	input, ok := p.Args["input"].(map[string]interface{})
 
@@ -96,7 +96,7 @@ func (r *Resolver) CreateUser(p graphql.ResolveParams) (interface{}, error) {
 
 	fmt.Printf("input: %+v\n", input)
 
-	result, err := queries.CreateUser(p.Context, db.CreateUserParams{
+	result, err := queries.CreateUser(p.Context, sqlcdb.CreateUserParams{
 		Name:  input["name"].(string),
 		Email: input["email"].(string),
 	})

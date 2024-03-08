@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/graphql-go/graphql"
-	db "github.com/ikhsanhaikal/rate-my-lecturer-graphql-admin/be-app/mysql"
+	"github.com/ikhsanhaikal/rate-my-lecturer-graphql-admin/be-app/sqlcdb"
 )
 
 func (builder TypeBuilder) LecturerType(labType *graphql.Object) *graphql.Object {
@@ -27,13 +27,13 @@ func (builder TypeBuilder) LecturerType(labType *graphql.Object) *graphql.Object
 			"lab": &graphql.Field{
 				Type: labType,
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-					source, ok := p.Source.(db.Lecturer)
+					source, ok := p.Source.(sqlcdb.Lecturer)
 
 					if !ok {
-						return nil, errors.New("failed that pretty much u need to know :).")
+						return nil, errors.New("failed that pretty much u need to know")
 					}
 
-					queries := db.New(builder.DB)
+					queries := sqlcdb.New(builder.DB)
 
 					// lab, err := source.getLab()
 

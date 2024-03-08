@@ -13,7 +13,7 @@ import (
 	"github.com/graphql-go/handler"
 	"github.com/ikhsanhaikal/rate-my-lecturer-graphql-admin/be-app/gql"
 	"github.com/ikhsanhaikal/rate-my-lecturer-graphql-admin/be-app/middleware"
-	db "github.com/ikhsanhaikal/rate-my-lecturer-graphql-admin/be-app/mysql"
+	"github.com/ikhsanhaikal/rate-my-lecturer-graphql-admin/be-app/sqlcdb"
 	"github.com/joho/godotenv"
 )
 
@@ -58,7 +58,7 @@ func main() {
 			"me": &graphql.Field{
 				Type: userType,
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-					var queries = db.New(conn)
+					var queries = sqlcdb.New(conn)
 
 					fmt.Printf("ME QUERY CALLED\n")
 
@@ -94,7 +94,7 @@ func main() {
 				},
 				Resolve: resolver.CreateLecturer,
 			},
-			"users": &graphql.Field{
+			"user": &graphql.Field{
 				Type:        userType,
 				Description: "create a user",
 				Args: graphql.FieldConfigArgument{
@@ -103,6 +103,17 @@ func main() {
 					},
 				},
 				Resolve: resolver.CreateUser,
+			},
+			"assignClass": &graphql.Field{
+				Type: graphql.String,
+				Args: graphql.FieldConfigArgument{
+					"review": &graphql.ArgumentConfig{
+						Type: graphql.NewNonNull(nil),
+					},
+				},
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					return nil, nil
+				},
 			},
 		},
 	})
