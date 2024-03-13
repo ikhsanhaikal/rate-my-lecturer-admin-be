@@ -9,10 +9,10 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/adaptor"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/graphql-go/graphql"
 	"github.com/graphql-go/handler"
 	"github.com/ikhsanhaikal/rate-my-lecturer-graphql-admin/be-app/gql"
-	"github.com/ikhsanhaikal/rate-my-lecturer-graphql-admin/be-app/middleware"
 	"github.com/ikhsanhaikal/rate-my-lecturer-graphql-admin/be-app/sqlcdb"
 	"github.com/joho/godotenv"
 )
@@ -43,10 +43,18 @@ func main() {
 		Name: "RootQuery",
 		Fields: graphql.Fields{
 			"lecturers": &graphql.Field{
-				Type:    graphql.NewList(lecturerType),
+				Type: graphql.NewList(lecturerType),
+				Args: graphql.FieldConfigArgument{
+					"limit": &graphql.ArgumentConfig{
+						Type: graphql.NewNonNull(graphql.Int),
+					},
+					"page": &graphql.ArgumentConfig{
+						Type: graphql.NewNonNull(graphql.Int),
+					},
+				},
 				Resolve: resolver.ListLecturers,
 			},
-			"lecturer": &graphql.Field{
+			"lecturers_by_pk": &graphql.Field{
 				Type: lecturerType,
 				Args: graphql.FieldConfigArgument{
 					"id": &graphql.ArgumentConfig{
@@ -54,6 +62,36 @@ func main() {
 					},
 				},
 				Resolve: resolver.GetLecturerById,
+			},
+			"lecturers_by_lab": &graphql.Field{
+				Type: graphql.NewList(lecturerType),
+				Args: graphql.FieldConfigArgument{
+					"id": &graphql.ArgumentConfig{
+						Type: graphql.NewNonNull(graphql.Int),
+					},
+				},
+				Resolve: resolver.GetLecturersByLab,
+			},
+			"labs": &graphql.Field{
+				Type: graphql.NewList(labType),
+				Args: graphql.FieldConfigArgument{
+					"limit": &graphql.ArgumentConfig{
+						Type: graphql.NewNonNull(graphql.Int),
+					},
+					"page": &graphql.ArgumentConfig{
+						Type: graphql.NewNonNull(graphql.Int),
+					},
+				},
+				Resolve: resolver.ListLabs,
+			},
+			"labs_by_pk": &graphql.Field{
+				Type: labType,
+				Args: graphql.FieldConfigArgument{
+					"id": &graphql.ArgumentConfig{
+						Type: graphql.NewNonNull(graphql.Int),
+					},
+				},
+				Resolve: resolver.GetLabById,
 			},
 			"me": &graphql.Field{
 				Type: userType,
@@ -84,7 +122,7 @@ func main() {
 	rootMutation := graphql.NewObject(graphql.ObjectConfig{
 		Name: "RootMutation",
 		Fields: graphql.Fields{
-			"lecturer": &graphql.Field{
+			"create_lecturers_one": &graphql.Field{
 				Type:        lecturerType,
 				Description: "create a lecturer",
 				Args: graphql.FieldConfigArgument{
@@ -104,17 +142,17 @@ func main() {
 				},
 				Resolve: resolver.CreateUser,
 			},
-			"assignClass": &graphql.Field{
-				Type: graphql.String,
-				Args: graphql.FieldConfigArgument{
-					"review": &graphql.ArgumentConfig{
-						Type: graphql.NewNonNull(nil),
-					},
-				},
-				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-					return nil, nil
-				},
-			},
+			// "assignClass": &graphql.Field{
+			// 	Type: graphql.String,
+			// 	Args: graphql.FieldConfigArgument{
+			// 		"review": &graphql.ArgumentConfig{
+			// 			Type: graphql.NewNonNull(nil),
+			// 		},
+			// 	},
+			// 	Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+			// 		return nil, nil
+			// 	},
+			// },
 		},
 	})
 
@@ -141,7 +179,12 @@ func main() {
 		// },
 	})
 
-	app.Use(middleware.AuthMiddleware(conn))
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: "http://localhost:5173",
+		AllowHeaders: "Origin, Content-Type, Accept",
+	}))
+
+	// app.Use(middleware.AuthMiddleware(conn))
 
 	app.All("/graphql", adaptor.HTTPHandler(h))
 
