@@ -6,7 +6,7 @@ import (
 
 func (builder TypeBuilder) LabType() *graphql.Object {
 	return graphql.NewObject(graphql.ObjectConfig{
-		Name: "Lab",
+		Name: "lab",
 		Fields: graphql.Fields{
 			"id": &graphql.Field{
 				Type: graphql.String,

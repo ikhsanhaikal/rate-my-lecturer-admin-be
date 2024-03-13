@@ -21,6 +21,11 @@ type TypeBuilder struct {
 func (r *Resolver) ListLecturers(p graphql.ResolveParams) (interface{}, error) {
 	queries := sqlcdb.New(r.DB)
 
+	limit, _ := p.Args["limit"].(int)
+	page, _ := p.Args["page"].(int)
+
+	fmt.Printf("limit: %d, page: %d\n", limit, page)
+
 	lecturers, err := queries.ListLecturers(p.Context)
 
 	if err != nil {

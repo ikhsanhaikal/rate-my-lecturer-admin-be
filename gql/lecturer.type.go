@@ -1,7 +1,6 @@
 package gql
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/graphql-go/graphql"
@@ -27,17 +26,23 @@ func (builder TypeBuilder) LecturerType(labType *graphql.Object) *graphql.Object
 			"lab": &graphql.Field{
 				Type: labType,
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-					source, ok := p.Source.(sqlcdb.Lecturer)
 
-					if !ok {
-						return nil, errors.New("failed that pretty much u need to know")
+					id := 0
+
+					switch v := p.Source.(type) {
+					case sqlcdb.Lecturer:
+						fmt.Printf("lecturer type %v\n", v)
+						source := p.Source.(sqlcdb.Lecturer)
+						id = int(source.Labid)
+					case sqlcdb.ListMembersRow:
+						fmt.Printf("members type")
+						source := p.Source.(sqlcdb.ListMembersRow)
+						id = int(source.Labid)
 					}
 
 					queries := sqlcdb.New(builder.DB)
 
-					// lab, err := source.getLab()
-
-					lab, err := queries.GetLab(p.Context, int32(source.Labid))
+					lab, err := queries.GetLab(p.Context, int32(id))
 
 					if err != nil {
 						return nil, err
