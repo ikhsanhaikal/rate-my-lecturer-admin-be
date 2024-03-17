@@ -2,8 +2,8 @@ package gql
 
 import "github.com/graphql-go/graphql"
 
-var CreateLecturerInput = graphql.NewInputObject(graphql.InputObjectConfig{
-	Name: "CreateLecturerInput",
+var CreateLecturersInput = graphql.NewInputObject(graphql.InputObjectConfig{
+	Name: "CreateLecturersInput",
 	Fields: graphql.InputObjectConfigFieldMap{
 		"name": &graphql.InputObjectFieldConfig{
 			Type: graphql.String,

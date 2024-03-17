@@ -14,10 +14,6 @@ type Resolver struct {
 	DB *sql.DB
 }
 
-type TypeBuilder struct {
-	DB *sql.DB
-}
-
 func (r *Resolver) ListLecturers(p graphql.ResolveParams) (interface{}, error) {
 	queries := sqlcdb.New(r.DB)
 
@@ -42,7 +38,7 @@ func (r *Resolver) GetLecturerById(p graphql.ResolveParams) (interface{}, error)
 
 	fmt.Printf("resolver user %+v\n", p.Context.Value("user"))
 
-	lecturer, err := queries.GetLecturerById(p.Context, int32(id))
+	lecturer, err := queries.GetLecturersByPk(p.Context, int32(id))
 
 	fmt.Printf("lecturer: %+v\n", lecturer)
 
@@ -51,42 +47,6 @@ func (r *Resolver) GetLecturerById(p graphql.ResolveParams) (interface{}, error)
 	}
 
 	return lecturer, nil
-}
-
-func (r *Resolver) CreateLecturer(p graphql.ResolveParams) (interface{}, error) {
-	var queries = sqlcdb.New(r.DB)
-
-	input, ok := p.Args["input"].(map[string]interface{})
-
-	if !ok {
-		fmt.Printf("err can't cast args to struct\n")
-		return nil, nil
-	}
-
-	fmt.Printf("input: %+v\n", input)
-
-	result, err := queries.CreateLecturer(p.Context, sqlcdb.CreateLecturerParams{
-		Name:        input["name"].(string),
-		Email:       input["email"].(string),
-		Description: input["description"].(string),
-		Labid:       int32(input["labId"].(int)),
-		Gender:      sqlcdb.LecturersGenderMale,
-	})
-
-	if err != nil {
-		var mysqlErr *mysql.MySQLError
-		if errors.As(err, &mysqlErr) && mysqlErr.Number == 1062 {
-			return nil, errors.New("data already exists")
-		}
-		fmt.Printf("failed oh failed\n")
-		return nil, err
-	}
-
-	id, _ := result.LastInsertId()
-
-	data, _ := queries.GetLecturerById(p.Context, int32(id))
-
-	return data, nil
 }
 
 func (r *Resolver) CreateUser(p graphql.ResolveParams) (interface{}, error) {
