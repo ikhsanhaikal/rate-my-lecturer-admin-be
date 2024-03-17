@@ -1,7 +1,7 @@
 CREATE TABLE reviews (
 	id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
 	classId BIGINT NOT NULL,
-	userId BIGINT NOT NULL,
+	reviewerId BIGINT NOT NULL,
 	comments VARCHAR(255),
 	rating FLOAT NOT NULL, 
 
@@ -10,7 +10,7 @@ CREATE TABLE reviews (
 											ON UPDATE CASCADE
 											ON DELETE CASCADE,
 
-	CONSTRAINT fk_user FOREIGN KEY (userId)
+	CONSTRAINT fk_user FOREIGN KEY (reviewerId)
 											REFERENCES users(id)
 											ON UPDATE CASCADE
 											ON DELETE CASCADE
