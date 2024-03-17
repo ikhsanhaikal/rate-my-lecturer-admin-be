@@ -7,7 +7,7 @@ import (
 	"github.com/ikhsanhaikal/rate-my-lecturer-graphql-admin/be-app/sqlcdb"
 )
 
-func (builder TypeBuilder) LecturerType(labType *graphql.Object) *graphql.Object {
+func (factory *GqlFactory) LecturerType(labType *graphql.Object) *graphql.Object {
 	return graphql.NewObject(graphql.ObjectConfig{
 		Name: "lecturer",
 		Fields: graphql.Fields{
@@ -22,6 +22,13 @@ func (builder TypeBuilder) LecturerType(labType *graphql.Object) *graphql.Object
 			},
 			"description": &graphql.Field{
 				Type: graphql.String,
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					source, ok := p.Source.(sqlcdb.Lecturer)
+					if !source.Description.Valid || !ok {
+						return "", nil
+					}
+					return source.Description.String, nil
+				},
 			},
 			"lab": &graphql.Field{
 				Type: labType,
@@ -31,20 +38,24 @@ func (builder TypeBuilder) LecturerType(labType *graphql.Object) *graphql.Object
 
 					switch v := p.Source.(type) {
 					case sqlcdb.Lecturer:
-						fmt.Printf("lecturer type %v\n", v)
+						fmt.Printf("lecturer type %+v\n", v)
 						source := p.Source.(sqlcdb.Lecturer)
 						id = int(source.Labid)
 					case sqlcdb.ListMembersRow:
-						fmt.Printf("members type")
+						fmt.Printf("members type %+v\n", v)
 						source := p.Source.(sqlcdb.ListMembersRow)
 						id = int(source.Labid)
+					default:
+						fmt.Printf("ohhh u screwed\n")
+						fmt.Printf("type: %T\n", v)
 					}
 
-					queries := sqlcdb.New(builder.DB)
+					queries := sqlcdb.New(factory.DB)
 
-					lab, err := queries.GetLab(p.Context, int32(id))
-
+					lab, err := queries.GetLabsByPk(p.Context, int32(id))
+					fmt.Printf("labid: %d\n", id)
 					if err != nil {
+						fmt.Printf("getLabsByPk err: %+v\n", err)
 						return nil, err
 					}
 

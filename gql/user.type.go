@@ -2,7 +2,7 @@ package gql
 
 import "github.com/graphql-go/graphql"
 
-func (builder *TypeBuilder) UserType() *graphql.Object {
+func (factory *GqlFactory) UserType() *graphql.Object {
 	return graphql.NewObject(graphql.ObjectConfig{
 		Name: "User",
 		Fields: graphql.Fields{
