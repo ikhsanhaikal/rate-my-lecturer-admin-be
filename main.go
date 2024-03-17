@@ -20,24 +20,25 @@ import (
 func main() {
 	app := fiber.New()
 
-	conn, err := sql.Open("mysql", "root:password@tcp(127.0.0.1:55001)/playground?parseTime=true")
+	conn, err := sql.Open("mysql", "root:password@tcp(127.0.0.1:55003)/rate_my_lecturer?parseTime=true")
 
 	if err != nil {
 		fmt.Printf("err(sql.Open):%+v\n", err)
 		os.Exit(1)
 	}
 
-	builder := gql.TypeBuilder{
-		DB: conn,
-	}
-
 	resolver := gql.Resolver{
 		DB: conn,
 	}
 
-	labType := builder.LabType()
-	lecturerType := builder.LecturerType(labType)
-	userType := builder.UserType()
+	gqlFactory := gql.GqlFactory{
+		DB: conn,
+	}
+
+	labType := gqlFactory.LabType()
+	lecturerType := gqlFactory.LecturerType(labType)
+	userType := gqlFactory.UserType()
+	subjectType := gqlFactory.SubjectType()
 
 	rootQuery := graphql.NewObject(graphql.ObjectConfig{
 		Name: "RootQuery",
@@ -93,6 +94,27 @@ func main() {
 				},
 				Resolve: resolver.GetLabById,
 			},
+			"subjects": &graphql.Field{
+				Type: graphql.NewList(subjectType),
+				Args: graphql.FieldConfigArgument{
+					"limit": &graphql.ArgumentConfig{
+						Type:         graphql.Int,
+						DefaultValue: 12,
+					},
+					"page": &graphql.ArgumentConfig{
+						Type:         graphql.Int,
+						DefaultValue: 1,
+					},
+				},
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					queries := sqlcdb.New(conn)
+					result, err := queries.ListSubjects(p.Context)
+					if err != nil {
+						return nil, err
+					}
+					return result, nil
+				},
+			},
 			"me": &graphql.Field{
 				Type: userType,
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
@@ -122,16 +144,12 @@ func main() {
 	rootMutation := graphql.NewObject(graphql.ObjectConfig{
 		Name: "RootMutation",
 		Fields: graphql.Fields{
-			"create_lecturers_one": &graphql.Field{
-				Type:        lecturerType,
-				Description: "create a lecturer",
-				Args: graphql.FieldConfigArgument{
-					"input": &graphql.ArgumentConfig{
-						Type: graphql.NewNonNull(gql.CreateLecturerInput),
-					},
-				},
-				Resolve: resolver.CreateLecturer,
-			},
+			"create_lecturers_one":   gqlFactory.CreateLecturer(lecturerType),
+			"delete_lecturers_by_pk": gqlFactory.DeleteLecturersByPk(lecturerType),
+			"delete_lecturers":       gqlFactory.DeleteLecturers(lecturerType),
+			"update_lecturers_one":   gqlFactory.UpdateLecturer(lecturerType),
+			"create_labs_one":        gqlFactory.CreateLab(labType),
+			"delete_labs_by_pk":      gqlFactory.DeleteLabsByPk(labType),
 			"user": &graphql.Field{
 				Type:        userType,
 				Description: "create a user",
@@ -142,17 +160,6 @@ func main() {
 				},
 				Resolve: resolver.CreateUser,
 			},
-			// "assignClass": &graphql.Field{
-			// 	Type: graphql.String,
-			// 	Args: graphql.FieldConfigArgument{
-			// 		"review": &graphql.ArgumentConfig{
-			// 			Type: graphql.NewNonNull(nil),
-			// 		},
-			// 	},
-			// 	Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-			// 		return nil, nil
-			// 	},
-			// },
 		},
 	})
 
@@ -170,13 +177,6 @@ func main() {
 		Pretty:     true,
 		GraphiQL:   false,
 		Playground: true,
-		// RootObjectFn: func(ctx context.Context, r *http.Request) map[string]interface{} {
-		// 	fmt.Printf("graphql: %+v\n", ctx.Value("user"))
-		// 	fmt.Printf("graphql: %+v\n", r.Context().Value("user"))
-		// 	return map[string]interface{}{
-		// 		"apple": "nil",
-		// 	}
-		// },
 	})
 
 	app.Use(cors.New(cors.Config{
