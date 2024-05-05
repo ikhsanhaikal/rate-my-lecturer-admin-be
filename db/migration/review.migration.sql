@@ -2,7 +2,7 @@ CREATE TABLE reviews (
 	id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
 	classId BIGINT NOT NULL,
 	reviewerId BIGINT NOT NULL,
-	comments VARCHAR(255),
+	comment VARCHAR(255),
 	rating FLOAT NOT NULL, 
 
 	CONSTRAINT fk_class FOREIGN KEY (classId)

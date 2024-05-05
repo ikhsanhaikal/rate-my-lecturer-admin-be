@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -22,6 +23,7 @@ func AuthMiddleware(conn *sql.DB) fiber.Handler {
 		SuccessHandler: func(c *fiber.Ctx) error {
 			user := c.Locals("token").(*jwt.Token)
 
+			fmt.Printf("success handler was called authmiddleware")
 			aud, err := user.Claims.GetAudience()
 
 			if err != nil {
@@ -65,29 +67,42 @@ func AuthMiddleware(conn *sql.DB) fiber.Handler {
 
 			queries := sqlcdb.New(conn)
 
-			// usrRecord, err := queries.GetUserByEmail(context.Background(), userInfo.Email)
+			editor, err := queries.GetEditorByEmail(context.Background(), userInfo.Email)
 
 			if err != nil {
 				if errors.Is(err, sql.ErrNoRows) {
 					fmt.Println("no user record was found by email")
-					queries.CreateUser(c.Context(), sqlcdb.CreateUserParams{
-						Email: userInfo.Email,
-						Name:  userInfo.Name,
+					_, err := queries.CreateEditor(c.Context(), sqlcdb.CreateEditorParams{
+						Email:    userInfo.Email,
+						Username: userInfo.Name,
 					})
+					if err != nil {
+						fmt.Printf("\n****error on create editor %+v\n", err)
+						return c.JSON(fiber.Map{
+							"error":   err,
+							"message": "server side error",
+						})
+					}
 				} else {
 					return c.JSON(fiber.Map{
 						"error":   err,
-						"message": "failed for some reaseon",
+						"message": "failed for some reason",
 					})
 				}
 			}
 
-			c.Locals("user", userInfo.Email)
+			fmt.Printf("editor: %+v\n", editor)
+			c.Locals("editor", userInfo.Email)
 
 			// fmt.Printf("usrRecord: %+v\n", usrRecord)
 			fmt.Printf("body %+v\n", userInfo)
 
 			return c.Next()
+		},
+		ErrorHandler: func(c *fiber.Ctx, err error) error {
+			fmt.Printf("hey erorr handler jwtware get called")
+			fmt.Printf("%+v\n", err)
+			return err
 		},
 		ContextKey: "token",
 	})

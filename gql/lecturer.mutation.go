@@ -2,14 +2,25 @@ package gql
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/graphql-go/graphql"
+	"github.com/graphql-go/graphql/gqlerrors"
 	"github.com/ikhsanhaikal/rate-my-lecturer-graphql-admin/be-app/sqlcdb"
+	"gopkg.in/guregu/null.v3"
 )
+
+type CreateLecturerDto struct {
+	Name        string
+	Email       string
+	Description *string
+	Gender      *string
+	Labid       int
+}
 
 func (factory *GqlFactory) CreateLecturer(returnType *graphql.Object) *graphql.Field {
 	return &graphql.Field{
@@ -22,22 +33,43 @@ func (factory *GqlFactory) CreateLecturer(returnType *graphql.Object) *graphql.F
 		},
 		Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 			var queries = sqlcdb.New(factory.DB)
+			var editorEmail = p.Context.Value("editor").(string)
 
-			input, ok := p.Args["input"].(map[string]interface{})
+			inputMap, ok := p.Args["input"].(map[string]interface{})
 
 			if !ok {
 				fmt.Printf("err can't cast args to struct\n")
 				return nil, nil
 			}
 
-			fmt.Printf("input: %+v\n", input)
+			b, err := json.Marshal(inputMap)
+
+			if err != nil {
+				return nil, err
+			}
+
+			createLecturerDto := &CreateLecturerDto{}
+
+			if err := json.Unmarshal(b, createLecturerDto); err != nil {
+				return nil, err
+			}
+
+			// labId := sql.NullInt32 {}
+
+			editor, err := queries.GetEditorByEmail(p.Context, editorEmail)
+
+			if err != nil {
+				fmt.Printf("failed on retrieving editor, %+v\n", err)
+				return nil, gqlerrors.FormatError(errors.New("server side error"))
+			}
 
 			id, err := queries.CreateLecturer(p.Context, sqlcdb.CreateLecturerParams{
-				Name:        input["name"].(string),
-				Email:       input["email"].(string),
-				Description: utilStringExist(input["description"]),
-				Labid:       int32(input["labId"].(int)),
-				Gender:      utilStringExist(input["gender"]),
+				Name:        createLecturerDto.Name,
+				Email:       createLecturerDto.Email,
+				Description: null.StringFromPtr(createLecturerDto.Description),
+				Labid:       sql.NullInt64{Int64: int64(createLecturerDto.Labid), Valid: true},
+				Gender:      null.StringFromPtr(createLecturerDto.Gender),
+				Editorid:    sql.NullInt64{Int64: int64(editor.ID), Valid: true},
 			})
 
 			if err != nil {
@@ -48,7 +80,7 @@ func (factory *GqlFactory) CreateLecturer(returnType *graphql.Object) *graphql.F
 				fmt.Printf("failed oh failed\n")
 				return nil, err
 			}
-			data, _ := queries.GetLecturersByPk(p.Context, int32(id))
+			data, _ := queries.GetLecturersByPk(p.Context, id)
 
 			return data, nil
 		},
@@ -56,7 +88,7 @@ func (factory *GqlFactory) CreateLecturer(returnType *graphql.Object) *graphql.F
 }
 
 var UpdateLecturerInput = graphql.NewInputObject(graphql.InputObjectConfig{
-	Name: "UpdateLecturerInput",
+	Name: "UpdateLecturersInput",
 	Fields: graphql.InputObjectConfigFieldMap{
 		"id": &graphql.InputObjectFieldConfig{
 			Type: graphql.Int,
@@ -65,6 +97,9 @@ var UpdateLecturerInput = graphql.NewInputObject(graphql.InputObjectConfig{
 			Type: graphql.String,
 		},
 		"email": &graphql.InputObjectFieldConfig{
+			Type: graphql.String,
+		},
+		"gender": &graphql.InputObjectFieldConfig{
 			Type: graphql.String,
 		},
 		"description": &graphql.InputObjectFieldConfig{
@@ -76,51 +111,67 @@ var UpdateLecturerInput = graphql.NewInputObject(graphql.InputObjectConfig{
 	},
 })
 
-func utilStringExist(givenString interface{}) sql.NullString {
-	if str, ok := givenString.(string); ok {
-		return sql.NullString{
-			String: str,
-			Valid:  true,
-		}
-	}
-	return sql.NullString{}
+type UpdateLecturerDto struct {
+	Name        *string
+	Email       *string
+	Description *string
+	Gender      *string
+	Labid       *int
 }
-func utilIntExist(givenInt interface{}) sql.NullInt32 {
-	if value, ok := givenInt.(int); ok {
-		return sql.NullInt32{
-			Int32: int32(value),
-			Valid: true,
-		}
+
+func existInt64(ptr *int) sql.NullInt64 {
+	if ptr != nil {
+		return sql.NullInt64{Int64: int64(*ptr), Valid: true}
 	}
-	return sql.NullInt32{}
+	return sql.NullInt64{}
 }
+
 func (factory *GqlFactory) UpdateLecturer(returnType *graphql.Object) *graphql.Field {
 	return &graphql.Field{
 		Type: returnType,
 		Args: graphql.FieldConfigArgument{
 			"input": &graphql.ArgumentConfig{
-				Type: UpdateLecturerInput,
+				Type: graphql.NewNonNull(UpdateLecturerInput),
 			},
 		},
 		Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-			queries := sqlcdb.New(factory.DB)
+			inputMap, _ := p.Args["input"].(map[string]interface{})
 
-			input, _ := p.Args["input"].(map[string]interface{})
-			targetId, _ := input["id"].(int)
-			var err = queries.UpdateLecturer(p.Context, sqlcdb.UpdateLecturerParams{
-				ID:          int32(targetId),
-				Name:        utilStringExist(input["name"]),
-				Email:       utilStringExist(input["name"]),
-				Description: utilStringExist(input["description"]),
-				Gender:      utilStringExist(input["gender"]),
-				Labid:       utilIntExist(input["labId"]),
+			b, err := json.Marshal(inputMap)
+
+			if err != nil {
+				return nil, err
+			}
+
+			updateLecturerInput := &UpdateLecturerDto{}
+
+			if err := json.Unmarshal(b, updateLecturerInput); err != nil {
+				return nil, err
+			}
+
+			fmt.Printf("updateLecturerInput: %+v\n", updateLecturerInput)
+
+			targetId, ok := inputMap["id"].(int)
+
+			if !ok {
+				return nil, gqlerrors.FormatError(errors.New("server side error"))
+			}
+
+			queries := sqlcdb.New(factory.DB)
+			err = queries.UpdateLecturer(p.Context, sqlcdb.UpdateLecturerParams{
+				ID:          int64(targetId),
+				Name:        null.StringFromPtr(updateLecturerInput.Name),
+				Email:       null.StringFromPtr(updateLecturerInput.Email),
+				Description: null.StringFromPtr(updateLecturerInput.Description),
+				Gender:      null.StringFromPtr(updateLecturerInput.Gender),
+				Labid:       existInt64(updateLecturerInput.Labid),
 			})
 
 			if err != nil {
 				return nil, err
 			}
 
-			var lecturer, _ = queries.GetLecturersByPk(p.Context, int32(targetId))
+			var lecturer, _ = queries.GetLecturersByPk(p.Context, int64(targetId))
 
 			return lecturer, nil
 		},
@@ -137,9 +188,26 @@ func (factory *GqlFactory) DeleteLecturersByPk(returnType *graphql.Object) *grap
 			},
 		},
 		Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-			// queries := sqlcdb.New(fac.DB)
+			fmt.Printf("----DeleteLecturersByPk was called-----\n")
+			lecturerId, ok := p.Args["id"].(int)
 
-			return nil, nil
+			if !ok {
+				return nil, gqlerrors.FormatError(errors.New("server side error"))
+			}
+
+			queries := sqlcdb.New(factory.DB)
+
+			lecturer, err := queries.GetLecturersByPk(p.Context, int64(lecturerId))
+
+			if err != nil {
+				return nil, err
+			}
+
+			if err := queries.DeleteLecturersByPk(p.Context, int64(lecturerId)); err != nil {
+				return nil, err
+			}
+
+			return lecturer, nil
 		},
 	}
 }
@@ -156,12 +224,8 @@ func (factory *GqlFactory) DeleteLecturers(returnType *graphql.Object) *graphql.
 
 			ids, ok := p.Args["ids"].([]interface{})
 			if !ok {
-				fmt.Printf("dude it's not okay for some reason to type assertion to []int\n")
 				return nil, errors.New("invalid ids")
 			}
-
-			fmt.Printf("T of args: %T\n", p.Args["ids"])
-			fmt.Printf("ok: %+v\n", ok)
 
 			targets := []string{}
 

@@ -1,5 +1,5 @@
 -- name: CreateUser :execresult
-INSERT INTO users (name, email) VALUES (?, ?);
+INSERT INTO users (username, email) VALUES (?, ?);
 
 -- name: GetUser :one
 SELECT * FROM users

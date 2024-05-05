@@ -1,6 +1,6 @@
 -- name: CreateLecturer :execlastid
-INSERT INTO lecturers (name, email, description, gender, labId) 
-			 VALUES (?, ?, ?, ?, ?);
+INSERT INTO lecturers (name, email, description, gender, labId, editorId) 
+			 VALUES (?, ?, ?, ?, ?, ?);
 
 -- name: DeleteLecturersByPk :exec
 DELETE FROM lecturers
@@ -28,10 +28,16 @@ SET
 WHERE id = sqlc.arg(id);
 
 -- name: ListLecturers :many
-SELECT *  FROM lecturers;
+SELECT * FROM lecturers 
+ORDER BY createdAt ASC LIMIT ? OFFSET ?;
+
+-- name: ListLecturersDesc :many
+SELECT * FROM lecturers 
+ORDER BY createdAt DESC LIMIT ? OFFSET ?;
 
 -- name: GetLecturersByPk :one
 SELECT * FROM lecturers 
 WHERE lecturers.id = ?;
 
-
+-- name: CountLecturers :one
+SELECT COUNT(*) FROM lecturers;

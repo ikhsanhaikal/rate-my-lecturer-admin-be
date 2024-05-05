@@ -5,5 +5,13 @@ sql:
     schema: "./db/migration/*.sql"
     gen:
       go:
+        emit_json_tags: true
         package: "sqlcdb"
         out: "sqlcdb"
+        overrides:
+          - db_type: "varchar"
+            nullable: true
+            go_type:
+              import: "gopkg.in/guregu/null.v3"
+              package: "null"
+              type: "String"

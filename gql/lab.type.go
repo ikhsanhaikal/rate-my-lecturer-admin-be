@@ -1,13 +1,13 @@
 package gql
 
 import (
-	"database/sql"
 	"errors"
 	"fmt"
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/graphql-go/graphql"
 	"github.com/ikhsanhaikal/rate-my-lecturer-graphql-admin/be-app/sqlcdb"
+	"gopkg.in/guregu/null.v3"
 )
 
 func (factory *GqlFactory) LabType() *graphql.Object {
@@ -32,34 +32,56 @@ func (factory *GqlFactory) LabType() *graphql.Object {
 
 func (r *Resolver) GetLecturersByLab(p graphql.ResolveParams) (interface{}, error) {
 	id, ok := p.Args["id"].(int)
+	// limit, _ := p.Args["limit"].(int)
+	// page, _ := p.Args["page"].(int)
 
 	if !ok {
 		return nil, errors.New("invalid pk")
 	}
+
 	queries := sqlcdb.New(r.DB)
-	members, err := queries.ListMembers(p.Context, int32(id))
+	members, err := queries.ListMembers(p.Context, int64(id))
 
 	if err != nil {
 		return nil, err
 	}
 
-	fmt.Printf("lecturers_by_lab: %+v\n", members)
-
-	return members, nil
+	return struct {
+		Data  []sqlcdb.Lecturer
+		Total int
+	}{
+		Data:  members,
+		Total: len(members),
+	}, nil
 }
+
 func (r *Resolver) ListLabs(p graphql.ResolveParams) (interface{}, error) {
 	queries := sqlcdb.New(r.DB)
+	limit, _ := p.Args["limit"].(int)
+	page, _ := p.Args["page"].(int)
 
-	labs, err := queries.ListLabs(p.Context)
-
-	fmt.Printf("labs: %+v\n", labs)
-
+	labs, err := queries.ListLabs(p.Context, sqlcdb.ListLabsParams{
+		Limit:  int32(limit),
+		Offset: int32(limit) * int32(page-1),
+	})
 	if err != nil {
 		return nil, err
 	}
+	total, err := queries.CountLabs(p.Context)
+	if err != nil {
+		return nil, err
+	}
+	// fmt.Printf("labs: %+v\n", labs)
 
-	return labs, nil
+	return struct {
+		Data  []sqlcdb.Lab
+		Total int64
+	}{
+		Data:  labs,
+		Total: total,
+	}, nil
 }
+
 func (r *Resolver) GetLabById(p graphql.ResolveParams) (interface{}, error) {
 	queries := sqlcdb.New(r.DB)
 
@@ -69,7 +91,7 @@ func (r *Resolver) GetLabById(p graphql.ResolveParams) (interface{}, error) {
 		return nil, errors.New("server error")
 	}
 
-	lab, err := queries.GetLabsByPk(p.Context, int32(id))
+	lab, err := queries.GetLabsByPk(p.Context, int64(id))
 
 	if err != nil {
 		return nil, err
@@ -85,7 +107,7 @@ func (factory *GqlFactory) CreateLab(returnType *graphql.Object) *graphql.Field 
 		Args: graphql.FieldConfigArgument{
 			"input": &graphql.ArgumentConfig{
 				Type: graphql.NewInputObject(graphql.InputObjectConfig{
-					Name: "CreateLabInput",
+					Name: "CreateLabsInput",
 					Fields: graphql.InputObjectConfigFieldMap{
 						"name": &graphql.InputObjectFieldConfig{
 							Type: graphql.String,
@@ -110,12 +132,10 @@ func (factory *GqlFactory) CreateLab(returnType *graphql.Object) *graphql.Field 
 				return nil, nil
 			}
 
-			fmt.Printf("input: %+v\n", input)
-
 			result, err := queries.CreateLab(p.Context, sqlcdb.CreateLabParams{
 				Name:        input["name"].(string),
 				Code:        input["code"].(string),
-				Description: sql.NullString{},
+				Description: null.String{},
 			})
 
 			if err != nil {
@@ -129,7 +149,7 @@ func (factory *GqlFactory) CreateLab(returnType *graphql.Object) *graphql.Field 
 
 			id, _ := result.LastInsertId()
 
-			data, _ := queries.GetLabsByPk(p.Context, int32(id))
+			data, _ := queries.GetLabsByPk(p.Context, int64(id))
 
 			return data, nil
 		},
@@ -154,7 +174,7 @@ func (factory *GqlFactory) DeleteLabsByPk(returnType *graphql.Object) *graphql.F
 				return nil, nil
 			}
 
-			result, err := queries.DeleteLab(p.Context, int32(id))
+			result, err := queries.DeleteLab(p.Context, int64(id))
 
 			if err != nil {
 				return nil, err
