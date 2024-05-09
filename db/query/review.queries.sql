@@ -20,7 +20,7 @@ WHERE r.id = ?;
 SELECT r.* FROM reviews r
 JOIN classes c on c.id  = r.classId 
 WHERE c.lecturerId = ?
-LIMIT ? OFFSET ?;
+ORDER BY r.createdAt ASC LIMIT ? OFFSET ?;
 
 -- name: CountReviewsByLecturer :one
 SELECT COUNT(*) FROM reviews r

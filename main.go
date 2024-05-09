@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -763,20 +764,28 @@ func main() {
 		Playground: true,
 	})
 
+	app.Use(func(c *fiber.Ctx) error {
+		// Check if the path starts with /graphql
+		if strings.Contains(c.Path(), "graphql") {
+			// If the path starts with /graphql, call next middleware
+			return c.Next()
+		}
+		// Serve the index.html file for any other path
+		return c.SendFile("./path/to/your/react/app/build/index.html")
+	})
 	app.Use("/graphql", cors.New(cors.Config{
 		AllowOrigins:     "http://localhost:5173",
 		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
 		AllowCredentials: true,
 	}))
-
 	// app.Use(func(c *fiber.Ctx) error {
-	// 	headers := c.GetReqHeaders()
-	// 	fmt.Printf("request headers: %+v\n", headers)
-	// 	return c.Next()
+	// headers := c.GetReqHeaders()
+	// fmt.Printf("request headers: %+v\n", headers)
+	// return c.Next()
 	// })
 	// app.Use(middleware.AuthMiddleware(conn))
-
+	//app.Use(middleware.AuthMiddleware(conn))
 	app.All("/graphql", adaptor.HTTPHandler(h))
-
-	app.Listen("127.0.0.1:8080")
+	//app.Listen("127.0.0.1:8080")
+	app.Listen(":8080")
 }

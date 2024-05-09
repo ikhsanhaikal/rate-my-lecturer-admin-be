@@ -13,5 +13,7 @@ CREATE TABLE reviews (
 	CONSTRAINT fk_user FOREIGN KEY (reviewerId)
 											REFERENCES users(id)
 											ON UPDATE CASCADE
-											ON DELETE CASCADE
+											ON DELETE CASCADE,
+
+	createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 );

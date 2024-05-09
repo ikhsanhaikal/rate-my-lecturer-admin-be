@@ -1,7 +1,7 @@
 -- name: ListCourseByLecturer :many
 SELECT * FROM classes c 
 WHERE c.lecturerId = ? 
-LIMIT ? OFFSET ?;
+ORDER BY c.createdAt ASC LIMIT ? OFFSET ?;
 
 -- name: CountCourseByLecturer :one
 SELECT COUNT(*) FROM classes c 
