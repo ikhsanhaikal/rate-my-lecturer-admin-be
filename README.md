@@ -1,5 +1,5 @@
 ### Demo
 
-![](showcase/screenflow_1.gif)
-![](showcase/screenflow_2.gif)
-![](showcase/screenflow_3.gif)
+![](showcase/ScreenFlow_1.gif)
+![](showcase/ScreenFlow_2.gif)
+![](showcase/ScreenFlow_3.gif)
